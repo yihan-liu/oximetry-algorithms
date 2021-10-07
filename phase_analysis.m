@@ -3,7 +3,7 @@ clear;
 clc;
 
 %% READ IN
-load('cycling_2.mat');
+load('cycling_2.mat'); % load data.
 
 TS = 1e-3; % interval for counting
 
