@@ -6,8 +6,9 @@ clc;
 
 if ~exist('data', 'var')
     
-    file_name = 'cycling_4.txt';
-    fid = fopen(file_name);
+    file_name = 'datasets/cycling_4';
+    format = '.txt';
+    fid = fopen(strcat(file_name, format));
     data = cell2mat(textscan(fid, '%f %f %f %f %f',...
         Delimiter='\t',...
         HeaderLines=6));
