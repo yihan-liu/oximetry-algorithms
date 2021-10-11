@@ -1,12 +1,12 @@
 % close all;
-clearvars -except data;
+clearvars -except data file_name;
 clc;
 
 %% READ IN
 
 if ~exist('data', 'var')
     
-    file_name = 'datasets/cycling_4';
+    file_name = 'datasets/wrist_hypoxia_3';
     format = '.txt';
     fid = fopen(strcat(file_name, format));
     data = cell2mat(textscan(fid, '%f %f %f %f %f',...
@@ -20,21 +20,24 @@ FS_raw = 10000; % s
 TS_raw = 1/FS_raw; % samples/s
 TIME_raw = data(:, 1)-data(1, 1);
 
-channel = 3;
+channel = 4;
 
 RED_offset = 0.6e-3;
 NIR_offset = 0.1e-3;
 LEN = length(data);
 
-TS = 0.6e-3; % s
+TS = 1e-3; % s
 FS = 1/TS; % samples/s
-
 
 TIME = transpose(0:TS:TIME_raw(end));
 RED = data(ceil(RED_offset*FS_raw):ceil(TS*FS_raw):LEN, 2:5);
 NIR = data(ceil(NIR_offset*FS_raw):ceil(TS*FS_raw):LEN, 2:5);
 
-% plot(TIME_raw, data(:,2));
+plot(TIME, NIR);
+hold on
+plot(TIME, RED)
+hold off
+% plot(TIME_raw, data(:, 2));
 % save(strcat(file_name, '.mat'), 'TIME', 'RED', 'NIR');
 
 %% WAVELET TRANSFORM
@@ -77,11 +80,11 @@ wt_ave = movmean(abs(wt), 5 * FS, 2);
 
 %% HEART RATE EXTRACTION
 
-wtt = wt_ave(f>0.8&f<2, :);
+wtt = wt_ave(f>0.1&f<1.5, :);
 cut = length(f(f>=2));
 
 [~, freq_index] = max(wtt, [], 1);
 max_freq = f(freq_index+cut);
 
 plot(TIME, max_freq);
-
+% writematrix([TIME, max_freq], 'heart_rate_res_hyp4_channel2.csv');
