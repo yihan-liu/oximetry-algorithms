@@ -3,16 +3,30 @@ clear;
 clc;
 
 %% READ IN
-load('cycling_2.mat');
+load('datasets/wrist_hypoxia_4.mat');
 
 TS = 1e-3; % interval for counting
 
-TIME = transpose(0:TS:(length(NIR)-1)*TS);
 FS = 1/TS;
 START = 5*FS;
 
 % select channel
-channel = 1;
+channel = 3;
+NIR_raw = NIR(:, channel);
+RED_raw = RED(:, channel);
+
+% trim data
+if length(RED) > length(NIR)
+    
+    RED_raw(length(NIR)+1:end, :) = [];
+    TIME(length(NIR)+1:end, :) = [];
+    
+elseif length(RED) < length(NIR)
+    
+    NIR_raw(length(RED_raw)+1:end, :) = [];
+    TIME(length(RED_raw)+1:end, :) = [];
+    
+end
 
 % plot the raw data
 % subplot(4, 2, 1);
@@ -40,8 +54,8 @@ channel = 1;
 
 %% DENOISE (LOCAL AVERAGE)
 
-NIR_ave = movmean(NIR, 5*FS, 1);
-RED_ave = movmean(RED, 5*FS, 1);
+NIR_ave = movmean(NIR_raw, 5*FS, 1);
+RED_ave = movmean(RED_raw, 5*FS, 1);
 
 % hw_s = 10; % half-window width in second
 % hw_sa = hw_s*FS; % half-window width in sample
@@ -73,8 +87,8 @@ RED_ave = movmean(RED, 5*FS, 1);
 % TIME(length(TIME) - START + 1: end) = [];
 % 
 subplot(4, 2, 1);
-plot(TIME, NIR(:, channel), 'g-',...
-    TIME, NIR_ave(:, channel), 'b--');
+plot(TIME, NIR_raw, 'g-',...
+    TIME, NIR_ave, 'b--');
 title('Filtered Data', 'fontsize', 30)
 ylabel('Voltage(mV)', 'fontsize', 16)
 set(gca,'FontSize', 14);
@@ -82,8 +96,8 @@ xlim([1, TIME(end)]);
 % ylim([350, 420]);
 
 subplot(4, 2, 3);
-plot(TIME, RED(:, channel), 'm-',...
-    TIME, RED_ave(:, channel), 'r--');
+plot(TIME, RED_raw, 'm-',...
+    TIME, RED_ave, 'r--');
 xlabel('Time(s)', 'fontsize', 16)
 ylabel('Voltage(mV)', 'fontsize', 16)
 set(gca,'FontSize', 14);
@@ -93,12 +107,12 @@ xlim([1, TIME(end)]);
 %% CALCULATE DIFFERENTIAL
 
 % initial light intensity
-RED_I0 = 413; % mV
-NIR_I0 = 491; % mV
+RED_I0 = 480; % mV
+NIR_I0 = 440; % mV
 
 % absorption
-RED_ab = log10(RED_I0./RED_ave(:,channel));
-NIR_ab = log10(NIR_I0./NIR_ave(:,channel));
+RED_ab = log10(RED_I0./RED_ave);
+NIR_ab = log10(NIR_I0./NIR_ave);
 
 % differential
 RED_ab_diff = circshift(RED_ab,-1)-RED_ab;
@@ -173,7 +187,7 @@ conc_diff = (1/dB) .* mtimes(...
 
 % Initial concentration
 conc_deox0 = 0.055; % mM
-conc_ox0 = 2; % mM
+conc_ox0 = 2.9; % mM
 
 conc_deox = conc_deox0;
 conc_ox = conc_ox0;
@@ -223,6 +237,6 @@ xlim([0, TIME(end)]);
 % xlim([0, TIME(end)]);
 % % ylim([80, 100]);
 
-% writematrix([TIME, SpO2], 'tissue_oximetry.csv');
+writematrix([TIME, tissue_SpO2], 'tissue_oximetry_res_hyp4_channel3.csv');
 % save('tissue_oxygen.mat','tissue_SpO2');
 
