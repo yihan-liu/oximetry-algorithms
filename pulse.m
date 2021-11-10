@@ -1,4 +1,4 @@
-% close all;
+close all;
 clearvars -except data file_name;
 clc;
 
@@ -6,7 +6,7 @@ clc;
 
 if ~exist('data', 'var')
     
-    file_name = 'datasets/wrist_hypoxia_6';
+    file_name = 'datasets/cycling_4';
     format = '.txt';
     fid = fopen(strcat(file_name, format));
     data = cell2mat(textscan(fid, '%f %f %f %f %f',...
@@ -19,12 +19,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parameters that need to be specified every time %
 
-FS_raw = 40000; % (Hz) sampling frequency of raw data
-TS = 1e-3; % (s/sample) interval between two neighboring selected points
-channel = 3; % choose a channel to calculate
+FS_raw = 10000; % (Hz) sampling frequency of raw data
+TS = 1.2e-3; % (s/sample) interval between two neighboring selected points
+channel = 2; % choose a channel to calculate
 
-RED_offset = 1.025e-3; % first point of RED signal
+RED_offset = 0.7e-3; % first point of RED signal
 NIR_offset = 0.1e-3; % first point of NIR signal
+
+% plot(data(:, 1), data(:, 2)) % for test
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -48,11 +50,13 @@ fb = cwtfilterbank(...
     SignalLength=length(TIME),...
     VoicesPerOctave=48,...
     SamplingFrequency=FS,...
-    FrequencyLimits=[0.1, 5]);
-[wt, f] = cwt(NIR(:, channel), FilterBank=fb);
+    FrequencyLimits=[0.5, 3]);
+[wt, f] = cwt(RED(:, channel), FilterBank=fb);
 
 figure
-cwt(NIR(:, channel), FilterBank=fb);
+cwt(RED(:, channel), FilterBank=fb);
+
+colorbar off
 
 wt_ave = movmean(abs(wt), 5*FS, 2);
 
@@ -63,7 +67,7 @@ wt_ave = movmean(abs(wt), 5*FS, 2);
 % 
 % % figure;
 % % cwt(NIR_1, FS);
-% % 
+% %  
 % % figure;
 % % cwt(NIR_2, FS);
 % 
@@ -78,9 +82,9 @@ wt_ave = movmean(abs(wt), 5*FS, 2);
 % ylim([0, 0.5]);
 % 
 % pulse_res = [TIME, wt_ave(freq_pulse, :)', wt_ave(freq_resp, :)'];
-% 
-% % writematrix(res, 'pulse & respiratory.csv');
-% save('pulse_extraction.mat', 'pulse_res');
+% % 
+% % % writematrix(res, 'pulse & respiratory.csv');
+% % save('pulse_extraction.mat', 'pulse_res');
 
 %% HEART RATE EXTRACTION
 
