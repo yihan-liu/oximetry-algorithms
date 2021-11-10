@@ -3,7 +3,7 @@ clear;
 clc;
 
 %% READ IN
-load('datasets/wrist_hypoxia_4.mat');
+load('datasets/wrist_hypoxia_8.mat');
 
 TS = 1e-3; % interval for counting
 
@@ -11,7 +11,7 @@ FS = 1/TS;
 START = 5*FS;
 
 % select channel
-channel = 3;
+channel = 4;
 NIR_raw = NIR(:, channel);
 RED_raw = RED(:, channel);
 
@@ -107,8 +107,8 @@ xlim([1, TIME(end)]);
 %% CALCULATE DIFFERENTIAL
 
 % initial light intensity
-RED_I0 = 480; % mV
-NIR_I0 = 440; % mV
+RED_I0 = 38; % mV
+NIR_I0 = 412; % mV
 
 % absorption
 RED_ab = log10(RED_I0./RED_ave);
@@ -119,20 +119,22 @@ RED_ab_diff = circshift(RED_ab,-1)-RED_ab;
 NIR_ab_diff = circshift(NIR_ab,-1)-NIR_ab;
 %
 subplot(4, 2, 2);
-plot(TIME, NIR_ab, 'b');
-title('Absorption differential', fontsize=30);
-ylabel('D (mm-1)', fontsize=16);
+plot(TIME, NIR_ab, 'b',...
+    TIME, 1000*NIR_ab_diff, 'g');
+title('Absorption and differential', fontsize=30);
+ylabel('D', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-% ylim([-5e-5, 5e-5]);
+ylim([-1e-3, 6e-3]);
 
 subplot(4, 2, 4);
-plot(TIME, RED_ab, 'r');
+plot(TIME, RED_ab, 'r',...
+    TIME, 1000*RED_ab_diff, 'm');
 xlabel('Time(s)', fontsize=16);
-ylabel('D (mm-1)', fontsize=16);
+ylabel('D', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-% ylim([-5e-5, 5e-5]);
+ylim([-1e-2, 4e-2]);
 
 % subplot(4, 2, 2);
 % plot(TIME, NIR_ab_diff, 'b');
@@ -156,7 +158,7 @@ extin_ox_RED = 0.011; % mm-1
 extin_ox_NIR = 0.028; % mm-1
 extin_deox_RED = 0.106; % mm-1
 extin_deox_NIR = 0.018; % mm-1
-dB = 3; % mm
+dB = 2; % mm
 
 conc_diff = (1/dB) .* mtimes(...
     inv([extin_deox_NIR, extin_ox_NIR;...
@@ -187,7 +189,7 @@ conc_diff = (1/dB) .* mtimes(...
 
 % Initial concentration
 conc_deox0 = 0.055; % mM
-conc_ox0 = 2.9; % mM
+conc_ox0 = 0.95; % mM
 
 conc_deox = conc_deox0;
 conc_ox = conc_ox0;
@@ -205,21 +207,23 @@ for t = 1: length(TIME)
 end
 
 subplot(4, 2, 5);
-plot(TIME, conc(1, :), 'b')  % Raw Data Plot
-title('deox conc', fontsize=30)
-ylabel('mM', fontsize=16)
+plot(TIME, conc(1, :), 'b',...
+    TIME, 1000*conc_diff(1, :), 'g');
+title('deox conc and differential', fontsize=30);
+ylabel('mM', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-% ylim([-1e-3, 1e-3]);
+ylim([-0.1, 0.3]);
 
 subplot(4, 2, 7);
-plot(TIME, conc(2, :), 'r')  % Raw Data Plot
-title('ox conc', fontsize=30)
-xlabel('Time(s)', fontsize=16)
-ylabel('mM', fontsize=16)
+plot(TIME, conc(2, :), 'r',...
+    TIME, 1000*conc_diff(2, :), 'm');
+title('ox conc and differential', fontsize=30);
+xlabel('Time(s)', fontsize=16);
+ylabel('mM', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-% ylim([-1e-3, 1e-3]);
+ylim([-0.1, 1]);
 
 subplot(2, 2, 4);
 plot(TIME, tissue_SpO2, 'b')  % Raw Data Plot
