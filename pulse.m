@@ -1,13 +1,14 @@
 % close all;
-clearvars -except data;
+clearvars -except data file_name;
 clc;
 
 %% READ IN
 
 if ~exist('data', 'var')
     
-    file_name = 'cycling_4.txt';
-    fid = fopen(file_name);
+    file_name = 'datasets/wrist_hypoxia_6';
+    format = '.txt';
+    fid = fopen(strcat(file_name, format));
     data = cell2mat(textscan(fid, '%f %f %f %f %f',...
         Delimiter='\t',...
         HeaderLines=6));
@@ -15,26 +16,31 @@ if ~exist('data', 'var')
     
 end
 
-FS_raw = 10000; % s
-TS_raw = 1/FS_raw; % samples/s
-TIME_raw = data(:, 1)-data(1, 1);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% parameters that need to be specified every time %
 
-channel = 3;
+FS_raw = 40000; % (Hz) sampling frequency of raw data
+TS = 1e-3; % (s/sample) interval between two neighboring selected points
+channel = 3; % choose a channel to calculate
 
-RED_offset = 0.6e-3;
-NIR_offset = 0.1e-3;
-LEN = length(data);
+RED_offset = 1.025e-3; % first point of RED signal
+NIR_offset = 0.1e-3; % first point of NIR signal
 
-TS = 0.6e-3; % s
-FS = 1/TS; % samples/s
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+TS_raw = 1/FS_raw; % (s/sample)
+TIME_raw = data(:, 1)-data(1, 1); % stores the raw time data
+LEN = length(data); % length of data
+FS = 1/TS; % (sample/s) new sampling frequency
 
 TIME = transpose(0:TS:TIME_raw(end));
 RED = data(ceil(RED_offset*FS_raw):ceil(TS*FS_raw):LEN, 2:5);
 NIR = data(ceil(NIR_offset*FS_raw):ceil(TS*FS_raw):LEN, 2:5);
 
-% plot(TIME_raw, data(:,2));
-% save(strcat(file_name, '.mat'), 'TIME', 'RED', 'NIR');
+% RED(end+1, :) = 0;
+
+% save(strcat(file_name, '.mat'), 'TIME', 'RED', 'NIR'); 
+% save as .mat file
 
 %% WAVELET TRANSFORM
 
@@ -42,11 +48,13 @@ fb = cwtfilterbank(...
     SignalLength=length(TIME),...
     VoicesPerOctave=48,...
     SamplingFrequency=FS,...
-    FrequencyLimits=[0.5, 2]);
+    FrequencyLimits=[0.1, 5]);
 [wt, f] = cwt(NIR(:, channel), FilterBank=fb);
-% cwt(NIR(:, channel), FS)
 
-wt_ave = movmean(abs(wt), 5 * FS, 2);
+figure
+cwt(NIR(:, channel), FilterBank=fb);
+
+wt_ave = movmean(abs(wt), 5*FS, 2);
 
 %% PLOT 
  
@@ -76,11 +84,13 @@ wt_ave = movmean(abs(wt), 5 * FS, 2);
 
 %% HEART RATE EXTRACTION
 
-wtt = wt_ave(f>0.8&f<2, :);
+wtt = wt_ave(f>0.1&f<2, :);
 cut = length(f(f>=2));
 
 [~, freq_index] = max(wtt, [], 1);
 max_freq = f(freq_index+cut);
 
+figure
 plot(TIME, max_freq);
-
+% writematrix([TIME, RED(:, channel), NIR(:, channel)], 'raw_data_hypoxia6_channel3.csv');
+% writematrix([TIME, max_freq], 'heart_rate_res_hypoxia6_channel3.csv');
