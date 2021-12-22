@@ -20,13 +20,13 @@ end
 % parameters that need to be specified every time %
 
 FS_raw = 10000; % (Hz) sampling frequency of raw data
-TS = 1.2e-3; % (s/sample) interval between two neighboring selected points
+TS = 1e-3; % (s/sample) interval between two neighboring selected points
 channel = 2; % choose a channel to calculate
 
-RED_offset = 0.7e-3; % first point of RED signal
+RED_offset = 0.6e-3; % first point of RED signal
 NIR_offset = 0.1e-3; % first point of NIR signal
 
-% plot(data(:, 1), data(:, 2)) % for test
+% figure; plot(data(:, 1), data(:, 2)) % for test
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -50,15 +50,18 @@ fb = cwtfilterbank(...
     SignalLength=length(TIME),...
     VoicesPerOctave=48,...
     SamplingFrequency=FS,...
-    FrequencyLimits=[0.5, 3]);
+    FrequencyLimits=[0.2, 3],...
+    TimeBandwidth=120);
 [wt, f] = cwt(RED(:, channel), FilterBank=fb);
 
 figure
 cwt(RED(:, channel), FilterBank=fb);
-
+caxis([0 1]);
+title("");
+xlabel([]);
 colorbar off
 
-wt_ave = movmean(abs(wt), 5*FS, 2);
+wt_ave = movmean(abs(wt), 1*FS, 2);
 
 %% PLOT 
  
@@ -86,15 +89,46 @@ wt_ave = movmean(abs(wt), 5*FS, 2);
 % % % writematrix(res, 'pulse & respiratory.csv');
 % % save('pulse_extraction.mat', 'pulse_res');
 
-%% HEART RATE EXTRACTION
+%% DATA EXTRACTION
 
 wtt = wt_ave(f>0.1&f<2, :);
 cut = length(f(f>=2));
 
-[~, freq_index] = max(wtt, [], 1);
-max_freq = f(freq_index+cut);
+wttt = wt_ave(f>0.65&f<4, :);
+cutt = length(f(f>=4));
+
+% HR and RR
+
+[~, hr_freq_index] = max(wtt, [], 1);
+hr_freq_index = hr_freq_index';
+hr_max_freq = f(hr_freq_index+cut);
+HR = 60*hr_max_freq;
+
+[~, rr_freq_index] = max(wttt, [], 1);
+rr_freq_index = rr_freq_index';
+rr_max_freq = f(rr_freq_index+cutt);
+RR = 60*rr_max_freq;
+
+% PI and RI
+
+% steady
+% PI = wtt(find(f>1.1&f<1.11)-cut, :)'; %#ok<FNDSB>
+% RI = wtt(find(f>0.5&f<0.505)-cut, :)'; %#ok<FNDSB>
+
+% moving
+% PI = zeros(length(TIME), 1);
+% for i = 1: length(TIME)
+%     PI(i) = wtt(hr_freq_index(i), i);
+% end
+% 
+% RI = zeros(length(TIME), 1);
+% for i = 1: length(TIME)
+%     RI(i) = wttt(rr_freq_index(i), i);
+% end
 
 figure
-plot(TIME, max_freq);
+plot(TIME, HR, TIME, RR);
+
+% surf(wtt, EdgeColor='none');
 % writematrix([TIME, RED(:, channel), NIR(:, channel)], 'raw_data_hypoxia6_channel3.csv');
-% writematrix([TIME, max_freq], 'heart_rate_res_hypoxia6_channel3.csv');
+% writematrix([TIME, PI, RI], 'PI_RI_res_cyc4_ch2.csv');
