@@ -3,12 +3,12 @@ clear;
 clc;
 
 %% READ IN
-load('datasets/wrist_hypoxia_7.mat');
+load('datasets/wrist_hypoxia_3.mat');
 
 TS = 1e-3; % interval for counting
 
 FS = 1/TS;
-START = 5*FS;
+START = 10*FS;
 
 % select channel
 channel = 4;
@@ -27,6 +27,10 @@ elseif length(RED) < length(NIR)
     TIME(length(RED_raw)+1:end, :) = [];
     
 end
+
+TIME = TIME(START+1: end)-START/FS;
+RED_raw = RED_raw(START+1: end);
+NIR_raw = NIR_raw(START+1: end);
 
 % plot the raw data
 % subplot(4, 2, 1);
@@ -107,8 +111,8 @@ xlim([1, TIME(end)]);
 %% CALCULATE DIFFERENTIAL
 
 % initial light intensity
-RED_I0 = 390; % mV
-NIR_I0 = 412; % mV
+RED_I0 = 456; % mV
+NIR_I0 = 435; % mV
 
 % absorption
 RED_ab = log10(RED_I0./RED_ave);
@@ -134,7 +138,7 @@ xlabel('Time(s)', fontsize=16);
 ylabel('D', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-ylim([-1e-2, 4e-2]);
+ylim([-1e-3, 5e-3]);
 
 % subplot(4, 2, 2);
 % plot(TIME, NIR_ab_diff, 'b');
@@ -241,6 +245,5 @@ xlim([0, TIME(end)]);
 % xlim([0, TIME(end)]);
 % % ylim([80, 100]);
 
-writematrix([TIME, tissue_SpO2], 'tissue_oximetry_res_hyp4_channel3.csv');
+writematrix([TIME, tissue_SpO2], 'StO2_res_hyp3_ch4.csv');
 % save('tissue_oxygen.mat','tissue_SpO2');
-

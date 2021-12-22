@@ -21,12 +21,12 @@ end
 
 FS_raw = 10000; % (Hz) sampling frequency of raw data
 TS = 1e-3; % (s/sample) interval between two neighboring selected points
-channel = 2; % choose a channel to calculate
+channel = 4; % choose a channel to calculate
 
 RED_offset = 0.6e-3; % first point of RED signal
 NIR_offset = 0.1e-3; % first point of NIR signal
 
-% figure; plot(data(:, 1), data(:, 2)) % for test
+% figure; plot(data(:, 1), data(:, 4)) % for test
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -50,13 +50,13 @@ fb = cwtfilterbank(...
     SignalLength=length(TIME),...
     VoicesPerOctave=48,...
     SamplingFrequency=FS,...
-    FrequencyLimits=[0.2, 3],...
+    FrequencyLimits=[0.5, 3],...
     TimeBandwidth=120);
 [wt, f] = cwt(RED(:, channel), FilterBank=fb);
 
 figure
 cwt(RED(:, channel), FilterBank=fb);
-caxis([0 1]);
+caxis([0 0.6]);
 title("");
 xlabel([]);
 colorbar off
@@ -94,8 +94,8 @@ wt_ave = movmean(abs(wt), 1*FS, 2);
 wtt = wt_ave(f>0.1&f<2, :);
 cut = length(f(f>=2));
 
-wttt = wt_ave(f>0.65&f<4, :);
-cutt = length(f(f>=4));
+wttt = wt_ave(f>0.5&f<0.8, :);
+cutt = length(f(f>=0.8));
 
 % HR and RR
 
@@ -116,19 +116,19 @@ RR = 60*rr_max_freq;
 % RI = wtt(find(f>0.5&f<0.505)-cut, :)'; %#ok<FNDSB>
 
 % moving
-% PI = zeros(length(TIME), 1);
-% for i = 1: length(TIME)
-%     PI(i) = wtt(hr_freq_index(i), i);
-% end
-% 
-% RI = zeros(length(TIME), 1);
-% for i = 1: length(TIME)
-%     RI(i) = wttt(rr_freq_index(i), i);
-% end
+PI = zeros(length(TIME), 1);
+for i = 1: length(TIME)
+    PI(i) = wtt(hr_freq_index(i), i);
+end
+
+RI = zeros(length(TIME), 1);
+for i = 1: length(TIME)
+    RI(i) = wttt(rr_freq_index(i), i);
+end
 
 figure
-plot(TIME, HR, TIME, RR);
+plot(TIME, PI, TIME, RI);
 
 % surf(wtt, EdgeColor='none');
 % writematrix([TIME, RED(:, channel), NIR(:, channel)], 'raw_data_hypoxia6_channel3.csv');
-% writematrix([TIME, PI, RI], 'PI_RI_res_cyc4_ch2.csv');
+writematrix([TIME, PI, RI], 'PI_RI_res_cyc4_ch4.csv');
