@@ -6,7 +6,7 @@ clc;
 
 if ~exist('data', 'var')
     
-    file_name = 'datasets/cycling_4';
+    file_name = 'datasets/wrist_hypoxia_4';
     format = '.txt';
     fid = fopen(strcat(file_name, format));
     data = cell2mat(textscan(fid, '%f %f %f %f %f',...
@@ -91,22 +91,27 @@ wt_ave = movmean(abs(wt), 1*FS, 2);
 
 %% DATA EXTRACTION
 
-wtt = wt_ave(f>0.1&f<2, :);
-cut = length(f(f>=2));
+upper_p = 1.2;
+lower_p = 0.8;
+upper_r = 0.7;
+lower_r = 0.5;
 
-wttt = wt_ave(f>0.5&f<0.8, :);
-cutt = length(f(f>=0.8));
+wtt_p = wt_ave(f>lower_p&f<upper_p, :);
+cut_p = length(f(f>=upper_p));
+
+wtt_r = wt_ave(f>lower_r&f<upper_r, :);
+cut_r = length(f(f>=upper_r));
 
 % HR and RR
 
-[~, hr_freq_index] = max(wtt, [], 1);
+[~, hr_freq_index] = max(wtt_p, [], 1);
 hr_freq_index = hr_freq_index';
-hr_max_freq = f(hr_freq_index+cut);
+hr_max_freq = f(hr_freq_index+cut_p);
 HR = 60*hr_max_freq;
 
-[~, rr_freq_index] = max(wttt, [], 1);
+[~, rr_freq_index] = max(wtt_r, [], 1);
 rr_freq_index = rr_freq_index';
-rr_max_freq = f(rr_freq_index+cutt);
+rr_max_freq = f(rr_freq_index+cut_r);
 RR = 60*rr_max_freq;
 
 % PI and RI
@@ -118,17 +123,17 @@ RR = 60*rr_max_freq;
 % moving
 PI = zeros(length(TIME), 1);
 for i = 1: length(TIME)
-    PI(i) = wtt(hr_freq_index(i), i);
+    PI(i) = wtt_p(hr_freq_index(i), i);
 end
 
 RI = zeros(length(TIME), 1);
 for i = 1: length(TIME)
-    RI(i) = wttt(rr_freq_index(i), i);
+    RI(i) = wtt_r(rr_freq_index(i), i);
 end
 
 figure
-plot(TIME, PI, TIME, RI);
+plot(TIME, HR);
 
 % surf(wtt, EdgeColor='none');
 % writematrix([TIME, RED(:, channel), NIR(:, channel)], 'raw_data_hypoxia6_channel3.csv');
-writematrix([TIME, PI, RI], 'PI_RI_res_cyc4_ch4.csv');
+writematrix([TIME, HR, RR], 'HR_RR_res_hyp4_ch4.csv');

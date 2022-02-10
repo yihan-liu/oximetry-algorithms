@@ -3,34 +3,37 @@ clear;
 clc;
 
 %% READ IN
-load('datasets/wrist_hypoxia_3.mat');
+load('datasets/blood_test_4_1.mat');
 
-TS = 1e-3; % interval for counting
+NIR_raw = NIR;
+RED_raw = RED;
 
+TS = 0.02; % interval for counting
+% 
 FS = 1/TS;
-START = 10*FS;
-
-% select channel
-channel = 4;
-NIR_raw = NIR(:, channel);
-RED_raw = RED(:, channel);
-
-% trim data
-if length(RED) > length(NIR)
-    
-    RED_raw(length(NIR)+1:end, :) = [];
-    TIME(length(NIR)+1:end, :) = [];
-    
-elseif length(RED) < length(NIR)
-    
-    NIR_raw(length(RED_raw)+1:end, :) = [];
-    TIME(length(RED_raw)+1:end, :) = [];
-    
-end
-
-TIME = TIME(START+1: end)-START/FS;
-RED_raw = RED_raw(START+1: end);
-NIR_raw = NIR_raw(START+1: end);
+START = 1;
+% 
+% % select channel
+% channel = 4;
+% NIR_raw = NIR(:, channel);
+% RED_raw = RED(:, channel);
+% 
+% % trim data
+% if length(RED) > length(NIR)
+%     
+%     RED_raw(length(NIR)+1:end, :) = [];
+%     TIME(length(NIR)+1:end, :) = [];
+%     
+% elseif length(RED) < length(NIR)
+%     
+%     NIR_raw(length(RED_raw)+1:end, :) = [];
+%     TIME(length(RED_raw)+1:end, :) = [];
+%     
+% end
+% 
+% TIME = TIME(START+1: end)-START/FS;
+% RED_raw = RED_raw(START+1: end);
+% NIR_raw = NIR_raw(START+1: end);
 
 % plot the raw data
 % subplot(4, 2, 1);
@@ -58,8 +61,16 @@ NIR_raw = NIR_raw(START+1: end);
 
 %% DENOISE (LOCAL AVERAGE)
 
-NIR_ave = movmean(NIR_raw, 5*FS, 1);
-RED_ave = movmean(RED_raw, 5*FS, 1);
+NIR_ave = movmean(NIR_raw, 2*FS, 1);
+RED_ave = movmean(RED_raw, 2*FS, 1);
+
+% NIR_bl = movmean(NIR_raw, 25*FS, 1)-NIR_ave(1);
+% RED_bl = movmean(RED_raw, 25*FS, 1)-RED_ave(1);
+NIR_bl = 0;
+RED_bl = 0;
+
+NIR_ex = NIR_ave-NIR_bl;
+RED_ex = RED_ave-RED_bl;
 
 % hw_s = 10; % half-window width in second
 % hw_sa = hw_s*FS; % half-window width in sample
@@ -91,8 +102,7 @@ RED_ave = movmean(RED_raw, 5*FS, 1);
 % TIME(length(TIME) - START + 1: end) = [];
 % 
 subplot(4, 2, 1);
-plot(TIME, NIR_raw, 'g-',...
-    TIME, NIR_ave, 'b--');
+plot(TIME, NIR_ex, 'g-');
 title('Filtered Data', 'fontsize', 30)
 ylabel('Voltage(mV)', 'fontsize', 16)
 set(gca,'FontSize', 14);
@@ -100,8 +110,7 @@ xlim([1, TIME(end)]);
 % ylim([350, 420]);
 
 subplot(4, 2, 3);
-plot(TIME, RED_raw, 'm-',...
-    TIME, RED_ave, 'r--');
+plot(TIME, RED_ex, 'm-');
 xlabel('Time(s)', 'fontsize', 16)
 ylabel('Voltage(mV)', 'fontsize', 16)
 set(gca,'FontSize', 14);
@@ -111,12 +120,12 @@ xlim([1, TIME(end)]);
 %% CALCULATE DIFFERENTIAL
 
 % initial light intensity
-RED_I0 = 456; % mV
-NIR_I0 = 435; % mV
+RED_I0 = RED_ex(1); % mV
+NIR_I0 = NIR_ex(1); % mV
 
 % absorption
-RED_ab = log10(RED_I0./RED_ave);
-NIR_ab = log10(NIR_I0./NIR_ave);
+RED_ab = log10(RED_I0./RED_ex);
+NIR_ab = log10(NIR_I0./NIR_ex);
 
 % differential
 RED_ab_diff = circshift(RED_ab,-1)-RED_ab;
@@ -129,7 +138,7 @@ title('Absorption and differential', fontsize=30);
 ylabel('D', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-ylim([-1e-3, 6e-3]);
+% ylim([-1e-3, 6e-3]);
 
 subplot(4, 2, 4);
 plot(TIME, RED_ab, 'r',...
@@ -138,7 +147,7 @@ xlabel('Time(s)', fontsize=16);
 ylabel('D', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-ylim([-1e-3, 5e-3]);
+% ylim([-1e-3, 5e-3]);
 
 % subplot(4, 2, 2);
 % plot(TIME, NIR_ab_diff, 'b');
@@ -167,7 +176,7 @@ dB = 2; % mm
 conc_diff = (1/dB) .* mtimes(...
     inv([extin_deox_NIR, extin_ox_NIR;...
     extin_deox_RED, extin_ox_RED]),...
-    [RED_ab_diff.'; NIR_ab_diff.']);
+    [RED_ab_diff; NIR_ab_diff]);
 % shape of conc_diff: 2, length(TIME)
 % conc_diff(1, :) stores deoxyhemoglobin conc change;
 % conc_diff(2, :) stores oxyhemoglobin conc change
@@ -198,11 +207,11 @@ conc_ox0 = 1.86; % mM
 conc_deox = conc_deox0;
 conc_ox = conc_ox0;
 
-tissue_SpO2 = zeros(length(TIME), 1);
+StO2 = zeros(length(TIME), 1);
 conc = zeros(2, length(TIME));
 
 for t = 1: length(TIME)
-    tissue_SpO2(t) = 100*conc_ox/(conc_ox+conc_deox);
+    StO2(t) = 100*conc_ox/(conc_ox+conc_deox);
     conc(1, t) = conc_deox;
     conc(2, t) = conc_ox;
     
@@ -217,7 +226,7 @@ title('deox conc and differential', fontsize=30);
 ylabel('mM', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-ylim([-0.1, 0.3]);
+% ylim([-0.1, 0.3]);
 
 subplot(4, 2, 7);
 plot(TIME, conc(2, :), 'r',...
@@ -227,15 +236,15 @@ xlabel('Time(s)', fontsize=16);
 ylabel('mM', fontsize=16);
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-ylim([-0.1, 1]);
+% ylim([-0.1, 1]);
 
 subplot(2, 2, 4);
-plot(TIME, tissue_SpO2, 'b')  % Raw Data Plot
+plot(TIME, StO2, 'b')  % Raw Data Plot
 xlabel('Time(s)', fontsize=16)
 % ylabel('Voltage', 'fontsize', 16)
 set(gca, FontSize=14);
 xlim([0, TIME(end)]);
-% ylim([85, 86]);
+ylim([0, 100]);
 
 % subplot(4, 2, 8);
 % plot(TIME, NIR_f, 'r')  % Raw Data Plot
@@ -245,5 +254,5 @@ xlim([0, TIME(end)]);
 % xlim([0, TIME(end)]);
 % % ylim([80, 100]);
 
-writematrix([TIME, tissue_SpO2], 'StO2_res_hyp3_ch4.csv');
+% writematrix([TIME, StO2], 'StO2_res_hyp4_ch4.csv');
 % save('tissue_oxygen.mat','tissue_SpO2');

@@ -7,16 +7,16 @@ cyc = 0;
 %% READ IN
 if cyc
     
-    load('datasets/cycling_4.mat'); % load data
+    load('datasets/cycling_4.mat'); %#ok<*UNRCH> % load data
     
     TS = 1e-3; % interval for counting
     
     FS = 1/TS; % sampling frequency
     START = 5*FS;
     
-    channel = 4;
-    NIR_raw = NIR(:, channel);
-    RED_raw = RED(:, channel);
+    channel_nir = 4;
+    NIR_raw = NIR(:, channel_nir);
+    RED_raw = RED(:, channel_nir);
     
     if length(NIR) > length(RED)
         
@@ -176,16 +176,17 @@ if cyc
     
 else
     
-    load('datasets/wrist_hypoxia_3.mat'); % load data
+    load('datasets/wrist_hypoxia_4.mat'); % load data
     
     TS = 1e-3; % interval for counting
     
     FS = 1/TS; % sampling frequency
     START = 15*FS;
     
-    channel = 1;
-    NIR_raw = NIR(:, channel);
-    RED_raw = RED(:, channel);
+    channel_nir = 2; % channel_hyp
+    channel_red = 1;
+    NIR_raw = NIR(:, channel_nir);
+    RED_raw = RED(:, channel_red);
     
     if length(NIR) > length(RED)
         
@@ -219,7 +220,7 @@ else
     %% AC FILTER
     
     % bandpass filter
-    heart_rate = [70 90];
+    heart_rate = [50 90];
     FC = heart_rate ./ 60;
     
     [b_ac, a_ac] = butter(2, FC/(FS/2), 'bandpass');
@@ -232,7 +233,7 @@ else
         NIR_dc(ceil(START+1):end),...
         'b',...
         TIME(ceil(START+1):end),...
-        NIR_ac(ceil(START+1):end)+NIR_dc(1)-NIR_ac(1),...
+        NIR_ac(ceil(START+1):end)+NIR_ave(15*FS)-NIR_ac(15*FS),...
         'c',...
         TIME(ceil(START+1):end),...
         NIR_ave(ceil(START+1):end),...
@@ -246,7 +247,7 @@ else
         RED_dc(ceil(START+1):end),...
         'r',...
         TIME(ceil(START+1):end),...
-        RED_ac(ceil(START+1):end)+RED_dc(1)-RED_ac(1),...
+        RED_ac(ceil(START+1):end)+RED_ave(15*FS)-RED_ac(15*FS),...
         'm',...
         TIME(ceil(START+1):end),...
         RED_ave(ceil(START+1):end),...
@@ -258,11 +259,12 @@ else
     
     %% RATIO & ENVELOPE
     
+    spacing = 0.5;
     RED_s = RED_ac ./ RED_dc;
     NIR_s = NIR_ac ./ NIR_dc;
     
-    [NIR_upper, NIR_lower] = envelope(NIR_s, 0.7 * FS, 'peak');
-    [RED_upper, RED_lower] = envelope(RED_s, 0.7 * FS, 'peak');
+    [NIR_upper, NIR_lower] = envelope(NIR_s, spacing*FS, 'peak');
+    [RED_upper, RED_lower] = envelope(RED_s, spacing*FS, 'peak');
     
     NIR_amp = NIR_upper - NIR_lower;
     RED_amp = RED_upper - RED_lower;
@@ -310,7 +312,7 @@ else
     width = 15*FS;
     integral_window = ones(width+1, 1);
     
-    R = conv(log_ratio, integral_window, 'same') ./ width;
+    R = 0.2*conv(log_ratio, integral_window, 'same') ./ width;
     
     subplot(2, 2, 3);
     plot(TIME(ceil(START+1):end),...
@@ -328,7 +330,7 @@ else
     extin_deox_RED = 0.106; % mm-1
     extin_deox_NIR = 0.018; % mm-1
     
-    DPF_RED_NIR = 1.4; % mm
+    DPF_RED_NIR = 0.7; % mm
     
     numerator = ...
         extin_deox_RED * DPF_RED_NIR * ones(length(TIME), 1) - ...
@@ -347,11 +349,11 @@ else
         SpO2_ave(ceil(START+1):end),...
         'b');
     xlabel('Time(s)', 'fontsize', 16)
-    ylabel('SpO2(t)', 'fontsize', 16)
-    title('Blood Oxygen Saturation', 'fontsize', 30)
+    ylabel('SpO_2(t)', 'fontsize', 16)
+    title('SpO_2', 'fontsize', 30)
     set(gca,'FontSize', 14);
 %     ylim([0.8, 1.2]);
     
 end
 writematrix([TIME(ceil(START+1):end),...
-    SpO2_ave(ceil(START+1):end)], 'SpO2_res_hyp3_ch2.csv');
+    SpO2_ave(ceil(START+1):end)], 'SpO2_res_hyp4_ch2.csv');
